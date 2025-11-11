@@ -6,6 +6,19 @@ import time
 from datetime import datetime
 import pandas as pd
 from suppress_warnings import suppress_popper_warnings
+import os
+from dotenv import load_dotenv
+import logging
+
+# Load environment variables
+load_dotenv()
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 st.set_page_config(
     page_title="AEO Monitor",
@@ -13,8 +26,55 @@ st.set_page_config(
     layout="wide"
 )
 
+# Custom CSS to increase sidebar width by 20%
+st.markdown("""
+    <style>
+        [data-testid="stSidebar"] {
+            min-width: 25.2rem;
+            max-width: 25.2rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # Suppress Popper.js console warnings
 suppress_popper_warnings()
+
+# Password Protection
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'using_own_keys' not in st.session_state:
+    st.session_state.using_own_keys = False
+
+APP_PASSWORD = os.getenv("APP_PASSWORD", "")
+
+if not st.session_state.authenticated:
+    st.title("🔒 AEO Monitoring Tool - Login")
+
+    st.markdown("### Option 1: Login with Password")
+    st.markdown("*Use the provided default API keys*")
+    password_input = st.text_input("Enter Password", type="password", key="password")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔐 Login with Password", width='stretch'):
+            if password_input == APP_PASSWORD:
+                st.session_state.authenticated = True
+                st.session_state.using_own_keys = False
+                st.rerun()
+            else:
+                st.error("❌ Incorrect password")
+
+    st.markdown("---")
+    st.markdown("### Option 2: Use Your Own API Keys")
+    st.markdown("*Enter and save your own OpenRouter API key*")
+
+    with col2:
+        if st.button("🔑 Use My Own API Keys", type="primary", width='stretch'):
+            st.session_state.authenticated = True
+            st.session_state.using_own_keys = True
+            st.rerun()
+
+    st.stop()
 
 st.title("🔍 AEO Monitoring Tool")
 st.markdown("*Answer Engine Optimization - SEO for LLMs with web search*")
@@ -23,19 +83,36 @@ st.markdown("---")
 # Sidebar Configuration
 st.sidebar.header("⚙️ Configuration")
 
+# Load API keys from environment (only if using password authentication)
+if st.session_state.using_own_keys:
+    default_openrouter_key = ""
+    default_posthog_key = ""
+    api_keys_expanded = True
+    st.sidebar.info("🔑 You are using your own API keys")
+else:
+    default_openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+    default_posthog_key = os.getenv("POSTHOG_API_KEY", "")
+    api_keys_expanded = False
+    st.sidebar.success("🔐 Using default API keys")
+
 # API Keys
-with st.sidebar.expander("🔑 API Keys", expanded=True):
+with st.sidebar.expander("🔑 API Keys", expanded=api_keys_expanded):
+    if st.session_state.using_own_keys:
+        st.warning("⚠️ Please enter your OpenRouter API key below to use the tool")
+
     openrouter_key = st.text_input(
         "OpenRouter API Key",
+        value=default_openrouter_key,
         type="password",
         help="Get your key from https://openrouter.ai"
     )
     posthog_key = st.text_input(
         "PostHog API Key (Optional)",
+        value=default_posthog_key,
         type="password",
         help="Optional: For analytics tracking"
     )
-    enable_posthog = st.checkbox("Enable PostHog Analytics", value=False)
+    enable_posthog = st.checkbox("Enable PostHog Analytics", value=bool(default_posthog_key))
 
 st.sidebar.markdown("---")
 
@@ -43,7 +120,7 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("🎯 Keywords to Monitor")
 keywords_input = st.sidebar.text_area(
     "Enter keywords (one per line)",
-    value="appsmith\nappsmithai",
+    value="measurement\nimpact\nanalysis\nstrategy",
     height=100
 )
 keywords = [k.strip().lower() for k in keywords_input.split("\n") if k.strip()]
@@ -52,7 +129,7 @@ keywords = [k.strip().lower() for k in keywords_input.split("\n") if k.strip()]
 st.sidebar.subheader("🌐 Domains to Track")
 domains_input = st.sidebar.text_area(
     "Enter domains (one per line)",
-    value="appsmith.com\nappsmithai.com",
+    value="thecompany.ai\nthecompany.com",
     height=100
 )
 domains = [d.strip().lower() for d in domains_input.split("\n") if d.strip()]
@@ -75,6 +152,17 @@ selected_models = st.sidebar.multiselect(
     default=["openai/gpt-4o", "perplexity/sonar-pro", "anthropic/claude-sonnet-4"]
 )
 
+# Debug: Session State Inspector
+st.sidebar.markdown("---")
+with st.sidebar.expander("🐛 Debug: Session State", expanded=False):
+    st.json({
+        "authenticated": st.session_state.get("authenticated", False),
+        "using_own_keys": st.session_state.get("using_own_keys", False),
+        "running": st.session_state.get("running", False),
+        "results_count": len(st.session_state.get("results", [])),
+        "session_keys": list(st.session_state.keys())
+    })
+
 # Main content area
 col1, col2 = st.columns([2, 1])
 
@@ -82,7 +170,7 @@ with col1:
     st.subheader("📝 Test Prompts")
     prompts_input = st.text_area(
         "Enter prompts (one per line)",
-        value="What's the best open source low code tool for building apps in 2025?\nWhat's the best drag and drop app builder with SSO in 2025?",
+        value="",
         height=200
     )
     prompts = [p.strip() for p in prompts_input.split("\n") if p.strip()]
@@ -103,6 +191,9 @@ if 'running' not in st.session_state:
 # Async function to query a single model
 async def query_model(client, model, prompt, posthog_client=None):
     try:
+        logger.info(f"Starting query - Model: {model}, Prompt: {prompt[:60]}...")
+        start_time = time.time()
+
         response = await client.responses.create(
             model=f"{model}:online",
             input=[
@@ -114,6 +205,9 @@ async def query_model(client, model, prompt, posthog_client=None):
             stream=False,
             reasoning={"effort": "medium"}
         )
+
+        query_duration = time.time() - start_time
+        logger.info(f"Response received - Model: {model}, Duration: {query_duration:.2f}s")
 
         content = response.output[0].content[0].text.lower()
         annotations = getattr(response.output[0].content[0], "annotations", [])
@@ -127,6 +221,7 @@ async def query_model(client, model, prompt, posthog_client=None):
                     "keyword": keyword,
                     "count": count
                 })
+                logger.info(f"Keyword match - Model: {model}, Keyword: '{keyword}', Count: {count}")
 
         # Check for domain matches in citations
         domain_matches = []
@@ -140,6 +235,7 @@ async def query_model(client, model, prompt, posthog_client=None):
                         "domain": domain,
                         "url": url
                     })
+                    logger.info(f"Domain match - Model: {model}, Domain: '{domain}', URL: {url}")
 
         result = {
             "model": model,
@@ -155,21 +251,26 @@ async def query_model(client, model, prompt, posthog_client=None):
 
         # Send to PostHog if enabled
         if posthog_client and enable_posthog:
+            event_properties = {
+                "model": model,
+                "prompt": prompt,
+                "keyword_matches": len(keyword_matches),
+                "domain_matches": len(domain_matches),
+                "total_citations": len(annotations),
+                "query_duration": query_duration
+            }
             posthog_client.capture(
                 distinct_id=f"aeo_monitor_{model}",
                 event="aeo_query_completed",
-                properties={
-                    "model": model,
-                    "prompt": prompt,
-                    "keyword_matches": len(keyword_matches),
-                    "domain_matches": len(domain_matches),
-                    "total_citations": len(annotations)
-                }
+                properties=event_properties
             )
+            logger.info(f"PostHog event sent - Model: {model}, Event: aeo_query_completed")
 
+        logger.info(f"Query completed successfully - Model: {model}, Keywords: {len(keyword_matches)}, Domains: {len(domain_matches)}, Citations: {len(annotations)}")
         return result
 
     except Exception as e:
+        logger.error(f"Query failed - Model: {model}, Error: {str(e)}")
         return {
             "model": model,
             "prompt": prompt,
@@ -178,13 +279,14 @@ async def query_model(client, model, prompt, posthog_client=None):
             "timestamp": datetime.now().isoformat()
         }
 
-# Async function to run all queries
-async def run_all_queries(api_key, models, prompts, posthog_client=None):
+# Async function to run all queries with progress tracking
+async def run_all_queries(api_key, models, prompts, posthog_client=None, progress_callback=None):
     config = {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key": api_key
     }
 
+    logger.info(f"Starting batch queries - Models: {len(models)}, Prompts: {len(prompts)}, Total: {len(models) * len(prompts)}")
     async_client = AsyncOpenAI(**config)
 
     tasks = []
@@ -192,12 +294,25 @@ async def run_all_queries(api_key, models, prompts, posthog_client=None):
         for prompt in prompts:
             tasks.append(query_model(async_client, model, prompt, posthog_client))
 
-    results = await asyncio.gather(*tasks)
+    # Track progress as tasks complete
+    results = []
+    total = len(tasks)
+    for i, task in enumerate(asyncio.as_completed(tasks)):
+        result = await task
+        results.append(result)
+
+        # Call progress callback if provided
+        if progress_callback:
+            progress_callback(i + 1, total, result)
+
+        logger.info(f"Progress: {i + 1}/{total} queries completed")
+
+    logger.info(f"Batch queries completed - Total: {total}, Successful: {sum(1 for r in results if r.get('success'))}")
     return results
 
 # Run button
 st.markdown("---")
-run_button = st.button("🚀 Run AEO Monitor", type="primary", use_container_width=True)
+run_button = st.button("🚀 Run AEO Monitor", type="primary", width='stretch')
 
 if run_button:
     if not openrouter_key:
@@ -222,23 +337,42 @@ if run_button:
         with st.spinner(f"Running {total_queries} queries..."):
             progress_bar = st.progress(0)
             status_text = st.empty()
+            detail_text = st.empty()
 
             start_time = time.time()
 
+            # Progress callback to update UI
+            def update_progress(completed, total, result):
+                progress_bar.progress(completed / total)
+                model = result.get('model', 'Unknown')
+                success = result.get('success', False)
+                status_icon = "✅" if success else "❌"
+                status_text.write(f"Progress: {completed}/{total} - {status_icon} {model}")
+
+                # Show match details
+                if success:
+                    kw_matches = len(result.get('keyword_matches', []))
+                    dm_matches = len(result.get('domain_matches', []))
+                    if kw_matches > 0 or dm_matches > 0:
+                        detail_text.success(f"🎯 Found {kw_matches} keyword matches, {dm_matches} domain citations")
+
             # Run queries
+            logger.info(f"User initiated query run - Total queries: {total_queries}")
             results = asyncio.run(run_all_queries(
                 openrouter_key,
                 selected_models,
                 prompts,
-                posthog_client
+                posthog_client,
+                update_progress
             ))
 
             end_time = time.time()
             duration = end_time - start_time
 
             st.session_state.results = results
-            progress_bar.progress(100)
+            progress_bar.progress(1.0)
             status_text.success(f"✅ Completed {total_queries} queries in {duration:.2f} seconds")
+            logger.info(f"Query run completed - Duration: {duration:.2f}s")
 
         st.session_state.running = False
 
@@ -246,6 +380,10 @@ if run_button:
 if st.session_state.results:
     st.markdown("---")
     st.header("📊 Results")
+
+    # Debug: Raw Results JSON viewer
+    with st.expander("🔍 Debug: Raw Results Data", expanded=False):
+        st.json(st.session_state.results)
 
     # Summary statistics
     successful_queries = [r for r in st.session_state.results if r.get("success")]
@@ -304,7 +442,7 @@ if st.session_state.results:
 
         if summary_data:
             df = pd.DataFrame(summary_data)
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(df, width='stretch')
 
             # Download button
             csv = df.to_csv(index=False)
@@ -333,3 +471,13 @@ st.markdown("""
 - Combine with content marketing campaigns to measure impact
 - Enable PostHog analytics for historical tracking and dashboards
 """)
+
+# Copyright footer
+st.markdown(
+    """
+    <div style='text-align: right; color: #666; font-size: 0.9em; margin-top: 2rem;'>
+        @2025 LikeSugarAI
+    </div>
+    """,
+    unsafe_allow_html=True
+)
