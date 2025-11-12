@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AEO Monitor is a Streamlit web application for Answer Engine Optimization (AEO) - essentially SEO for LLMs with web search. It monitors brand visibility in AI model responses by querying multiple AI models simultaneously via OpenRouter, tracking keyword mentions and domain citations across different models.
 
-Originally converted from a Colab notebook to a production Streamlit app with password protection, async execution, and optional analytics.
+Originally converted from a Colab notebook to a production Streamlit app with dual authentication options (password or BYOK), async execution, comprehensive logging, and optional analytics.
 
 ## Commands
 
@@ -22,22 +22,49 @@ pip install -r requirements.txt
 ```
 
 ### Environment Setup
+
+The app supports two authentication modes:
+
+**Option 1: Password-Protected Deployment (shared API keys)**
 Create a `.env` file with:
-- `OPENROUTER_API_KEY` (required) - API key from https://openrouter.ai
+- `APP_PASSWORD` (required) - Password to gate access
+- `OPENROUTER_API_KEY` (required) - Your OpenRouter API key from https://openrouter.ai
 - `POSTHOG_API_KEY` (optional) - For analytics tracking
-- `APP_PASSWORD` (optional) - Password protection for the app
+
+**Option 2: Bring Your Own Keys (BYOK only)**
+No environment variables required. Users enter their own OpenRouter API key in the UI.
+
+**Optional for both modes:**
+- `POSTHOG_API_KEY` - PostHog analytics tracking
 
 ## Architecture
 
 ### Core Application Flow (app.py)
 
-1. **Password Protection** (lines 24-40): Uses session state to gate access if `APP_PASSWORD` is set
-2. **Configuration Sidebar** (lines 46-105): API keys, keywords, domains, and model selection
-3. **Async Query Engine** (lines 132-225):
+1. **Dual Authentication System** (lines 44-78):
+   - **Option 1**: Password login - uses default API keys from environment variables
+   - **Option 2**: Bring Your Own Keys (BYOK) - bypasses password, requires user to enter their own OpenRouter key
+   - Uses session state to manage `authenticated` and `using_own_keys` flags
+
+2. **Configuration Sidebar** (lines 84-165):
+   - API keys input (with conditional expansion based on auth method)
+   - Keywords to monitor (one per line)
+   - Domains to track (one per line)
+   - Model selection from available OpenRouter models
+   - Debug panel showing session state (collapsible)
+
+3. **Enhanced Keyword Matching** (lines 193-219):
+   - `_normalize_word()`: Light stemming for plural detection (e.g., "strategies" → "strategy")
+   - `count_keyword_occurrences()`: Word-boundary aware matching with plural handling
+   - Multi-word phrase support using regex
+
+4. **Async Query Engine** (lines 222-349):
    - `query_model()`: Single async query to OpenRouter using OpenAI Responses API (not Chat Completions API)
-   - `run_all_queries()`: Orchestrates parallel execution across all models and prompts
-   - Uses `asyncio.gather()` for concurrent API calls
-4. **Results Processing** (lines 274-354): Three-tab interface for detailed results, summary table, and errors
+   - Conditional reasoning parameter: only added for models with "thinking", "reasoning", or "o1" in name (line 241-243)
+   - `run_all_queries()`: Orchestrates parallel execution with live progress tracking
+   - Uses `asyncio.as_completed()` for real-time updates as queries finish
+
+5. **Results Processing** (lines 418-501): Three-tab interface for detailed results, summary table, and errors
 
 ### Key Technical Details
 
@@ -48,20 +75,28 @@ Create a `.env` file with:
 - Response structure: `response.output[0].content[0].text` for content
 - Citations extracted from `annotations` attribute containing URL citations
 
-**Matching Logic** (lines 151-172):
-- Keyword matches: Case-insensitive substring search with count tracking
+**Matching Logic** (lines 193-276):
+- Keyword matches: Word-boundary aware with plural handling (e.g., "strategy" matches "strategies")
+- Multi-word phrase support using regex for exact phrase matching
 - Domain matches: Extracted from annotation URLs in citations
 - All searches performed on lowercased content
 
 **Session State Management**:
 - `authenticated`: Boolean for password gate
+- `using_own_keys`: Boolean flag for BYOK vs password auth mode
 - `results`: List of result dictionaries from queries
 - `running`: Boolean flag for execution state
 
-**PostHog Analytics** (lines 185-197):
+**Logging** (lines 12-22):
+- Python logging module configured at INFO level
+- Logs query start/completion, match detection, PostHog events, and errors
+- All logs output to terminal for debugging
+
+**PostHog Analytics** (lines 291-305):
 - Optional telemetry sent per successful query
-- Tracks model, prompt, match counts, and citation counts
+- Tracks model, prompt, match counts, citation counts, and query duration
 - Uses distinct_id format: `aeo_monitor_{model}`
+- Event name: `aeo_query_completed`
 
 ### Helper Modules
 
@@ -83,7 +118,10 @@ Three-tab Display (Detailed/Summary/Errors) + CSV Export + Optional PostHog Even
 
 - When modifying API calls, remember the app uses the **Responses API** (`responses.create()`), not the Chat Completions API
 - Model identifiers must include `:online` suffix for web search to enable citations
+- The `reasoning={"effort": "medium"}` parameter is **conditionally added** only for models containing "thinking", "reasoning", or "o1" in their name (app.py:241-243)
+- Keyword matching uses word-boundary detection and light stemming for plural handling
 - All matching is case-insensitive - content and URLs are lowercased before comparison
 - Error handling stores failed queries separately with `success: False` flag
 - Results include full response content but UI truncates to 500 chars in detailed view
-- The `reasoning={"effort": "medium"}` parameter is optional and only works with reasoning models
+- Progress tracking uses `asyncio.as_completed()` for real-time updates as each query finishes
+- Debug panels available in both sidebar (session state) and results section (raw JSON)

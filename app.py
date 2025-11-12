@@ -27,12 +27,26 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS to increase sidebar width by 20%
+# Custom CSS to increase sidebar width and force theme colors
 st.markdown("""
     <style>
+        /* Force theme colors to override browser caching */
+        .stApp {
+            background-color: #4C1D95;
+        }
         [data-testid="stSidebar"] {
+            background-color: #6B21A8;
             min-width: 25.2rem;
             max-width: 25.2rem;
+        }
+        /* Ensure text contrast */
+        .stApp, .stApp * {
+            color: #FAF5FF !important;
+        }
+        /* Maintain button and accent colors */
+        .stButton > button {
+            background-color: #D97706;
+            color: #FAF5FF;
         }
     </style>
 """, unsafe_allow_html=True)
