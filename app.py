@@ -1,5 +1,6 @@
 import streamlit as st
 import asyncio
+import re
 from openai import AsyncOpenAI
 from posthog import Posthog
 import time
@@ -188,23 +189,60 @@ if 'results' not in st.session_state:
 if 'running' not in st.session_state:
     st.session_state.running = False
 
+
+def _normalize_word(word: str) -> str:
+    """Apply a tiny stemming heuristic for plural detection."""
+    if word.endswith("ies") and len(word) > 3:
+        return word[:-3] + "y"
+    if word.endswith("es") and len(word) > 2 and (word[:-2].endswith(("s", "x", "z", "ch", "sh"))):
+        return word[:-2]
+    if word.endswith("s") and len(word) > 1 and not word.endswith(("ss", "is", "us")):
+        return word[:-1]
+    return word
+
+
+def count_keyword_occurrences(content: str, keyword: str) -> int:
+    """Count keyword occurrences with light plural handling."""
+    keyword = keyword.strip().lower()
+    if not keyword:
+        return 0
+
+    if " " in keyword:
+        pattern = re.compile(rf"(?<!\w){re.escape(keyword)}(?!\w)")
+        return len(pattern.findall(content))
+
+    words = re.findall(r"[a-z0-9']+", content)
+    count = 0
+    for word in words:
+        if keyword == word or keyword == _normalize_word(word):
+            count += 1
+    return count
+
 # Async function to query a single model
 async def query_model(client, model, prompt, posthog_client=None):
     try:
         logger.info(f"Starting query - Model: {model}, Prompt: {prompt[:60]}...")
         start_time = time.time()
 
-        response = await client.responses.create(
-            model=f"{model}:online",
-            input=[
+        # Build request parameters
+        request_params = {
+            "model": f"{model}:online",
+            "input": [
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            stream=False,
-            reasoning={"effort": "medium"}
-        )
+            "stream": False
+        }
+        
+        # Only add reasoning parameter for models that support it
+        # Reasoning models typically have "thinking" or "reasoning" in their name
+        if "thinking" in model.lower() or "reasoning" in model.lower() or "o1" in model.lower():
+            request_params["reasoning"] = {"effort": "medium"}
+            logger.info(f"Using reasoning parameter for model: {model}")
+
+        response = await client.responses.create(**request_params)
 
         query_duration = time.time() - start_time
         logger.info(f"Response received - Model: {model}, Duration: {query_duration:.2f}s")
@@ -215,8 +253,8 @@ async def query_model(client, model, prompt, posthog_client=None):
         # Check for keyword matches
         keyword_matches = []
         for keyword in keywords:
-            if keyword in content:
-                count = content.count(keyword)
+            count = count_keyword_occurrences(content, keyword)
+            if count > 0:
                 keyword_matches.append({
                     "keyword": keyword,
                     "count": count
