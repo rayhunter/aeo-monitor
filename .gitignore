@@ -38,6 +38,7 @@ Thumbs.db
 
 # Streamlit
 .streamlit/secrets.toml
+.streamlit.pid
 
 # Logs
 *.log

@@ -14,6 +14,8 @@ Answer Engine Optimization (AEO) monitoring tool for tracking brand visibility i
 - Interactive web interface built with Streamlit
 - **Comprehensive observability**: Python logging, debug tools, session state inspection
 - **Granular progress updates**: Live updates as each query completes with match details
+- **Graceful shutdown**: Proper cleanup of async tasks and connections on Ctrl+C
+- **Process management**: Shell script for easy start/stop/restart operations
 
 ## Installation
 
@@ -27,13 +29,38 @@ pip install -r requirements.txt
 
 ## Usage
 
-Run the Streamlit app:
+### Quick Start
+
+Run the Streamlit app directly:
 
 ```bash
 streamlit run app.py
 ```
 
 The app will open in your browser at <http://localhost:8501>
+
+### Process Management (Recommended)
+
+Use the management script for better control:
+
+```bash
+# Start the app in background
+./manage_app.sh start
+
+# Check status
+./manage_app.sh status
+
+# Stop gracefully
+./manage_app.sh stop
+
+# View logs
+./manage_app.sh logs
+
+# Force cleanup if needed
+./manage_app.sh cleanup
+```
+
+See [MANAGEMENT_GUIDE.md](MANAGEMENT_GUIDE.md) for complete documentation on process management and graceful shutdown features.
 
 ## Configuration
 
