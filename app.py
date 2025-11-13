@@ -60,11 +60,43 @@ if 'authenticated' not in st.session_state:
 if 'using_own_keys' not in st.session_state:
     st.session_state.using_own_keys = False
 
+# Initialize instructions panel state (before authentication)
+if 'show_instructions' not in st.session_state:
+    st.session_state.show_instructions = True  # Show on first visit
+if 'instructions_content' not in st.session_state:
+    # Load instructions from markdown file
+    try:
+        with open('INSTRUCTIONS.md', 'r') as f:
+            st.session_state.instructions_content = f.read()
+    except FileNotFoundError:
+        st.session_state.instructions_content = "# Instructions\nInstructions file not found."
+
 APP_PASSWORD = os.getenv("APP_PASSWORD", "")
 
 if not st.session_state.authenticated:
     st.title("🔒 AEO Monitoring Tool - Login")
+    
+    # Instructions panel on login page - Pure Streamlit approach
+    if st.session_state.show_instructions:
+        # Create a full-screen dialog using Streamlit's dialog feature
+        @st.dialog("📚 Getting Started Guide", width="large")
+        def show_instructions():
+            # Display the instructions with native markdown rendering
+            st.markdown(st.session_state.instructions_content)
+            
+            # Close button at the bottom
+            if st.button("✕ Close Instructions", type="primary", use_container_width=True):
+                st.session_state.show_instructions = False
+                st.rerun()
+        
+        show_instructions()
 
+    # Add button to view instructions if closed
+    if not st.session_state.show_instructions:
+        if st.button("📚 View Instructions", type="secondary"):
+            st.session_state.show_instructions = True
+            st.rerun()
+    
     st.markdown("### Option 1: Login with Password")
     st.markdown("*Use the provided default API keys*")
     password_input = st.text_input("Enter Password", type="password", key="password")
@@ -145,9 +177,16 @@ st.sidebar.subheader("🌐 Domains to Track")
 domains_input = st.sidebar.text_area(
     "Enter domains (one per line)",
     value="thecompany.ai\nthecompany.com",
-    height=100
+    height=100,
+    key="domains_textarea"
 )
 domains = [d.strip().lower() for d in domains_input.split("\n") if d.strip()]
+
+# Debug: Show parsed domains
+if domains:
+    with st.sidebar.expander("📋 Parsed Domains", expanded=False):
+        for i, domain in enumerate(domains, 1):
+            st.text(f"{i}. {domain}")
 
 # Model selection
 st.sidebar.subheader("🤖 Models")
