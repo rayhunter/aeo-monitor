@@ -126,7 +126,6 @@ Which companies offer business intelligence solutions?
 
 ## ⚙️ Advanced Features
 
-- **Theme toggle**: Switch between dark/light themes in sidebar
 - **Debug tools**: Expand "Debug: Session State" to see internal data
 - **Process management**: Use `./manage_app.sh` for production deployments
 - **Analytics**: Enable PostHog to track historical data

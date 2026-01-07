@@ -2,9 +2,9 @@
 port = 8505
 
 [theme]
-# Accessible Deep Purple & Dark Yellow Theme
-primaryColor = "#D97706"           # Dark yellow/amber for buttons and accents (amber-600)
-backgroundColor = "#4C1D95"         # Deep purple background (purple-900)
-secondaryBackgroundColor = "#6B21A8" # Medium purple for cards/sidebar (purple-800)
-textColor = "#FAF5FF"              # Very light purple/white for excellent contrast (purple-50)
+# Accessible Deep Purple & Dark Yellow Theme (15% lighter)
+primaryColor = "#DF8B2B"           # Lighter yellow/amber for buttons and accents
+backgroundColor = "#673FA5"         # Lighter deep purple background
+secondaryBackgroundColor = "#8142B5" # Lighter medium purple for cards/sidebar
+textColor = "#FBF7FF"              # Lighter very light purple/white for excellent contrast
 font = "sans serif"
