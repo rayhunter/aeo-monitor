@@ -1,10 +1,7 @@
 [server]
-port = 8505
+headless = true
+enableCORS = false
+enableXsrfProtection = false
 
-[theme]
-# Accessible Deep Purple & Dark Yellow Theme (15% lighter)
-primaryColor = "#DF8B2B"           # Lighter yellow/amber for buttons and accents
-backgroundColor = "#673FA5"         # Lighter deep purple background
-secondaryBackgroundColor = "#8142B5" # Lighter medium purple for cards/sidebar
-textColor = "#FBF7FF"              # Lighter very light purple/white for excellent contrast
-font = "sans serif"
+[browser]
+gatherUsageStats = false
