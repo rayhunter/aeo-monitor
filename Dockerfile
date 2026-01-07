@@ -29,7 +29,6 @@ EXPOSE 8501
 
 # Run the application
 # Note: Environment variables (API keys, PORT) are injected at runtime by Railway
-# Railway provides $PORT dynamically, but Docker CMD doesn't expand shell variables
-# So we use a shell form to allow variable expansion
-CMD streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.headless=true
+# Use exec form with sh to properly expand PORT variable
+CMD ["sh", "-c", "streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.headless=true"]
 
