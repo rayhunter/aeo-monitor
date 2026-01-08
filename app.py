@@ -43,6 +43,13 @@ st.markdown("""
         .stApp, .stApp * {
             color: #FAF5FF !important;
         }
+        /* Fix input and textarea text color for visibility */
+        textarea, input[type="text"], input[type="password"] {
+            color: #1F2937 !important;
+            background-color: #F9FAFB !important;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
+            border-radius: 0.375rem !important;
+        }
         /* Maintain button and accent colors */
         .stButton > button {
             background-color: #D97706;
@@ -62,7 +69,7 @@ if 'using_own_keys' not in st.session_state:
 
 # Initialize instructions panel state (before authentication)
 if 'show_instructions' not in st.session_state:
-    st.session_state.show_instructions = True  # Show on first visit
+    st.session_state.show_instructions = False
 if 'instructions_content' not in st.session_state:
     # Load instructions from markdown file
     try:
@@ -74,7 +81,15 @@ if 'instructions_content' not in st.session_state:
 APP_PASSWORD = os.getenv("APP_PASSWORD", "")
 
 if not st.session_state.authenticated:
-    st.title("🔒 AEO Monitoring Tool - Login")
+    # Header with instructions link
+    col_title, col_help = st.columns([3, 1])
+    with col_title:
+        st.title("🔒 AEO Monitoring Tool - Login")
+    with col_help:
+        st.write("")  # Spacing
+        if st.button("📚 Help & Instructions", type="secondary", use_container_width=True):
+            st.session_state.show_instructions = True
+            st.rerun()
     
     # Instructions panel on login page - Pure Streamlit approach
     if st.session_state.show_instructions:
@@ -90,36 +105,27 @@ if not st.session_state.authenticated:
                 st.rerun()
         
         show_instructions()
-
-    # Add button to view instructions if closed
-    if not st.session_state.show_instructions:
-        if st.button("📚 View Instructions", type="secondary"):
-            st.session_state.show_instructions = True
-            st.rerun()
     
     st.markdown("### Option 1: Login with Password")
     st.markdown("*Use the provided default API keys*")
     password_input = st.text_input("Enter Password", type="password", key="password")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔐 Login with Password", width='stretch'):
-            if password_input == APP_PASSWORD:
-                st.session_state.authenticated = True
-                st.session_state.using_own_keys = False
-                st.rerun()
-            else:
-                st.error("❌ Incorrect password")
+    if st.button("🔐 Login with Password", use_container_width=True):
+        if password_input == APP_PASSWORD:
+            st.session_state.authenticated = True
+            st.session_state.using_own_keys = False
+            st.rerun()
+        else:
+            st.error("❌ Incorrect password")
 
     st.markdown("---")
     st.markdown("### Option 2: Use Your Own API Keys")
     st.markdown("*Enter and save your own OpenRouter API key*")
-
-    with col2:
-        if st.button("🔑 Use My Own API Keys", type="primary", width='stretch'):
-            st.session_state.authenticated = True
-            st.session_state.using_own_keys = True
-            st.rerun()
+    
+    if st.button("🔑 Use My Own API Keys", type="primary", use_container_width=True):
+        st.session_state.authenticated = True
+        st.session_state.using_own_keys = True
+        st.rerun()
 
     st.stop()
 

@@ -19,10 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY suppress_warnings.py .
 COPY aeo_monitor.py .
-
-# Create .streamlit directory for config
-RUN mkdir -p .streamlit
-COPY .streamlit/config.toml .streamlit/
+COPY INSTRUCTIONS.md .
 
 # Expose the port Streamlit runs on (Railway will override with $PORT)
 EXPOSE 8501
