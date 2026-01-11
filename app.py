@@ -50,18 +50,100 @@ st.markdown("""
             box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
             border-radius: 0.375rem !important;
         }
-        /* Make password visibility toggle button visible */
-        button[kind="icon"], button[kind="icon"] * {
-            color: #1F2937 !important;
-            opacity: 0.7;
+        /* Make password visibility toggle button visible - AGGRESSIVE approach */
+        /* Target all password input container buttons */
+        div[data-baseweb="input"] button,
+        div[data-baseweb="input"] button *,
+        div[data-baseweb="input"] button svg,
+        div[data-baseweb="input"] button svg *,
+        button[kind="icon"],
+        button[kind="icon"] *,
+        button[kind="icon"] svg,
+        button[kind="icon"] svg *,
+        button[data-testid="baseButton-icon"],
+        button[data-testid="baseButton-icon"] *,
+        button[data-testid="baseButton-icon"] svg,
+        button[data-testid="baseButton-icon"] svg * {
+            color: #111827 !important;
+            fill: #111827 !important;
+            stroke: #111827 !important;
+            opacity: 1 !important;
+            display: inline-block !important;
+            visibility: visible !important;
+            background-color: transparent !important;
         }
-        button[kind="icon"]:hover {
-            opacity: 1;
+        div[data-baseweb="input"] button:hover,
+        button[kind="icon"]:hover,
+        button[kind="icon"]:hover * {
+            filter: brightness(0.7) !important;
+            background-color: rgba(0, 0, 0, 0.05) !important;
+        }
+        /* Ensure sidebar password toggle icons are visible - AGGRESSIVE approach */
+        [data-testid="stSidebar"] div[data-baseweb="input"] button,
+        [data-testid="stSidebar"] div[data-baseweb="input"] button *,
+        [data-testid="stSidebar"] div[data-baseweb="input"] button svg,
+        [data-testid="stSidebar"] div[data-baseweb="input"] button svg *,
+        [data-testid="stSidebar"] button[kind="icon"],
+        [data-testid="stSidebar"] button[kind="icon"] *,
+        [data-testid="stSidebar"] button[kind="icon"] svg,
+        [data-testid="stSidebar"] button[kind="icon"] svg *,
+        [data-testid="stSidebar"] button[data-testid="baseButton-icon"],
+        [data-testid="stSidebar"] button[data-testid="baseButton-icon"] *,
+        [data-testid="stSidebar"] button[data-testid="baseButton-icon"] svg,
+        [data-testid="stSidebar"] button[data-testid="baseButton-icon"] svg * {
+            color: #111827 !important;
+            fill: #111827 !important;
+            stroke: #111827 !important;
+            opacity: 1 !important;
+            display: inline-block !important;
+            visibility: visible !important;
+            background-color: transparent !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="input"] button:hover,
+        [data-testid="stSidebar"] button[kind="icon"]:hover {
+            filter: brightness(0.7) !important;
+            background-color: rgba(0, 0, 0, 0.05) !important;
         }
         /* Maintain button and accent colors */
         .stButton > button {
             background-color: #D97706;
             color: #FAF5FF;
+        }
+        /* Sidebar-specific textarea styles */
+        [data-testid="stSidebar"] textarea {
+            color: #1F2937 !important;
+            background-color: #F9FAFB !important;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
+            border-radius: 0.375rem !important;
+            min-height: 100px !important;
+        }
+        /* Sidebar-specific text input styles */
+        [data-testid="stSidebar"] input[type="text"],
+        [data-testid="stSidebar"] input[type="password"] {
+            color: #1F2937 !important;
+            background-color: #F9FAFB !important;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
+            border-radius: 0.375rem !important;
+        }
+        /* Sidebar expander header - always darker purple */
+        [data-testid="stSidebar"] .streamlit-expanderHeader,
+        [data-testid="stSidebar"] button[kind="header"],
+        [data-testid="stSidebar"] [data-testid="stExpanderToggleIcon"],
+        [data-testid="stSidebar"] details summary {
+            background-color: #581C87 !important;
+            color: #FAF5FF !important;
+        }
+        [data-testid="stSidebar"] .streamlit-expanderHeader:hover,
+        [data-testid="stSidebar"] button[kind="header"]:hover,
+        [data-testid="stSidebar"] details summary:hover {
+            background-color: #6B21A8 !important;
+        }
+        /* Force all sidebar expander components to use dark background */
+        [data-testid="stSidebar"] [data-testid*="expander"] {
+            background-color: transparent !important;
+        }
+        [data-testid="stSidebar"] [data-testid*="expander"] > div:first-child {
+            background-color: #581C87 !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -167,13 +249,15 @@ with st.sidebar.expander("🔑 API Keys", expanded=api_keys_expanded):
         "OpenRouter API Key",
         value=default_openrouter_key,
         type="password",
-        help="Get your key from https://openrouter.ai"
+        help="Get your key from https://openrouter.ai",
+        key="sidebar_openrouter_key"
     )
     posthog_key = st.text_input(
         "PostHog API Key (Optional)",
         value=default_posthog_key,
         type="password",
-        help="Optional: For analytics tracking"
+        help="Optional: For analytics tracking",
+        key="sidebar_posthog_key"
     )
     enable_posthog = st.checkbox("Enable PostHog Analytics", value=bool(default_posthog_key))
 
