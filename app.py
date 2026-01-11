@@ -50,6 +50,14 @@ st.markdown("""
             box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
             border-radius: 0.375rem !important;
         }
+        /* Make password visibility toggle button visible */
+        button[kind="icon"], button[kind="icon"] * {
+            color: #1F2937 !important;
+            opacity: 0.7;
+        }
+        button[kind="icon"]:hover {
+            opacity: 1;
+        }
         /* Maintain button and accent colors */
         .stButton > button {
             background-color: #D97706;
@@ -72,24 +80,26 @@ if 'show_instructions' not in st.session_state:
     st.session_state.show_instructions = False
 if 'instructions_content' not in st.session_state:
     # Load instructions from markdown file
+    # Use absolute path based on the app's location to avoid path issues
+    import pathlib
+    instructions_path = pathlib.Path(__file__).parent / 'INSTRUCTIONS.md'
     try:
-        with open('INSTRUCTIONS.md', 'r') as f:
+        with open(instructions_path, 'r') as f:
             st.session_state.instructions_content = f.read()
     except FileNotFoundError:
-        st.session_state.instructions_content = "# Instructions\nInstructions file not found."
+        st.session_state.instructions_content = f"# Instructions\n\nInstructions file not found at: {instructions_path}"
 
 APP_PASSWORD = os.getenv("APP_PASSWORD", "")
 
 if not st.session_state.authenticated:
-    # Header with instructions link
-    col_title, col_help = st.columns([3, 1])
-    with col_title:
-        st.title("🔒 AEO Monitoring Tool - Login")
-    with col_help:
-        st.write("")  # Spacing
-        if st.button("📚 Help & Instructions", type="secondary", use_container_width=True):
-            st.session_state.show_instructions = True
-            st.rerun()
+    st.title("🔒 AEO Monitoring Tool - Login")
+    
+    # Help button below title
+    if st.button("📚 Need Help? View Getting Started Guide", type="secondary", key="help_btn"):
+        st.session_state.show_instructions = True
+        st.rerun()
+    
+    st.markdown("---")
     
     # Instructions panel on login page - Pure Streamlit approach
     if st.session_state.show_instructions:
