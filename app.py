@@ -44,11 +44,19 @@ st.markdown("""
             color: #FAF5FF !important;
         }
         /* Fix input and textarea text color for visibility */
-        textarea, input[type="text"], input[type="password"] {
+        textarea, 
+        textarea *,
+        input[type="text"], 
+        input[type="password"] {
             color: #1F2937 !important;
             background-color: #F9FAFB !important;
             box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
             border-radius: 0.375rem !important;
+        }
+        /* Ensure main content textarea text is visible */
+        [data-testid="stMain"] textarea,
+        [data-testid="stMain"] textarea * {
+            color: #1F2937 !important;
         }
         /* Make password visibility toggle button visible - AGGRESSIVE approach */
         /* Target all password input container buttons */
