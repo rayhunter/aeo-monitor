@@ -30,11 +30,13 @@ ENV/
 htmlcov/
 *.log
 
-# Documentation
-*.md
-INSTRUCTIONS.md
+# Documentation (excluding INSTRUCTIONS.md which is needed by the app)
+# *.md - Commented out to allow INSTRUCTIONS.md to be included
 MANAGEMENT_GUIDE.md
 CTRL_C_SOLUTION.md
+CLAUDE.md
+GEMINI.md
+README.md
 
 # Scripts
 manage_app.sh
