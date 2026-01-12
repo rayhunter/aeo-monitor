@@ -332,7 +332,7 @@ with st.sidebar.expander("🐛 Debug: Session State", expanded=False):
     })
 
 # Main content area
-col1, col2 = st.columns([2, 1])
+col1, col2 = st.columns(2, gap="large")  # Equal width columns with large gap
 
 with col1:
     st.subheader("📝 Test Prompts")
