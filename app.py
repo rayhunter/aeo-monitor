@@ -34,6 +34,12 @@ st.markdown("""
         .stApp {
             background-color: #4C1D95;
         }
+        /* Make app header black */
+        [data-testid="stAppViewContainer"] > header,
+        [data-testid="stHeader"],
+        header[data-testid="stHeader"] {
+            background-color: #000000 !important;
+        }
         [data-testid="stSidebar"] {
             background-color: #6B21A8;
             min-width: 25.2rem;
